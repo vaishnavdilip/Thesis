@@ -85,7 +85,18 @@ class Graph:
         RETURN a
         '''
         print(self.query_run(company_query, {}))
-        
+
+    def add_sector_info(self):
+        sector_query = '''
+        LOAD CSV WITH HEADERS FROM 'file:///info.csv' AS line
+        MATCH (a:Company {id: line.id})
+        SET a.sector = line.sector
+        SET a.industry = line.industry
+        SET a.nace_description = line.nace_description
+        SET a.code = line.code
+        RETURN a
+        '''
+        print(self.query_run(sector_query, {}))
 
     def create_competitors(self):
 
