@@ -3,6 +3,7 @@ This file contains functions that can be used throughout the project.
 """
 
 from neo4j import GraphDatabase, basic_auth
+import pandas as pd
 
 
 class Graph:
@@ -40,6 +41,15 @@ class Graph:
         self.driver.close()
 
         print(results)
+
+    def query_run_df(self, query, parameters):
+
+        with self.driver.session(database="neo4j") as session:
+            result = session.run(query,parameters)
+            df = pd.DataFrame([r.values() for r in result], columns=result.keys())
+        self.driver.close()
+
+        return df 
 
     def create_competitors(self):
         company_query = '''
