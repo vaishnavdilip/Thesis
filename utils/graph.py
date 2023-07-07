@@ -3,10 +3,12 @@ This file contains functions that can be used throughout the project.
 """
 
 from neo4j import GraphDatabase, basic_auth
+from neo4j.spatial import WGS84Point
 import pandas as pd
 
 
 class Graph:
+    
     def __init__(self, uri, username, password):
         self.uri = uri
         self.username = username
@@ -17,8 +19,11 @@ class Graph:
         driver = GraphDatabase.driver(
             self.uri, auth=basic_auth(self.username, self.password)
         )
+            self.uri, auth=basic_auth(self.username, self.password)
+        )
         return driver
 
+    def read_query(self, cypher_query, parameters):
     def read_query(self, cypher_query, parameters):
         with self.driver.session(database="neo4j") as session:
             results = session.execute_read(
@@ -27,6 +32,7 @@ class Graph:
         self.driver.close()
 
         return results
+
 
     def query_run(self, query, parameters):
         """This is the function used to run queries.
@@ -40,12 +46,14 @@ class Graph:
         """
         with self.driver.session(database="neo4j") as session:
             results = session.run(query, parameters).data()
+            results = session.run(query, parameters).data()
         self.driver.close()
 
         print(results)
 
     def query_run_df(self, query, parameters):
         with self.driver.session(database="neo4j") as session:
+            result = session.run(query, parameters)
             result = session.run(query, parameters)
             df = pd.DataFrame([r.values() for r in result], columns=result.keys())
         self.driver.close()
@@ -54,11 +62,13 @@ class Graph:
 
     def create_competitors(self):
         company_query = """
+        company_query = """
             LOAD CSV WITH HEADERS FROM "file://" AS line
             MERGE (a:Company {id: line.source_id, name: line.source_name})
             MERGE (b:Company {id: line.target_id, name: line.targte_name})
             MERGE (a)-[:COMPETES]-(b)
             RETURN a,b
+            """
             """
 
         results = self.query_run(company_query, {})
@@ -74,10 +84,16 @@ class Graph:
         CREATE CONSTRAINT competitor_id FOR ()<-[comp:COMPETES]->() REQUIRE comp.id IS NOT NULL;
         """
         parent_constraint_query = """
+        """
+        parent_constraint_query = """
         CREATE CONSTRAINT parent_id FOR ()-[comp:ULTIMATE_PARENT_OF]->() REQUIRE comp.id IS NOT NULL;
         """
         partner_constraint_query = """
+        """
+        partner_constraint_query = """
         CREATE CONSTRAINT partner_id FOR ()<-[comp:PARTNERS]->() REQUIRE comp.id IS NOT NULL;
+        """
+        supplier_constraint_query = """
         """
         supplier_constraint_query = """
         CREATE CONSTRAINT supplier_id FOR ()-[comp:SUPPLIES]->() REQUIRE comp.id IS NOT NULL;
@@ -89,11 +105,14 @@ class Graph:
         self.query_run(partner_constraint_query, {})
         self.query_run(supplier_constraint_query, {})
 
+
     def create_company(self):
+        company_query = """
         company_query = """
         LOAD CSV WITH HEADERS FROM 'file:///companies.csv' AS line
         MERGE (a:Company {id: line.id, name: line.name})
         RETURN a
+        """
         """
         print(self.query_run(company_query, {}))
 
@@ -110,6 +129,7 @@ class Graph:
 
     def add_sector_info(self):
         sector_query = """
+        sector_query = """
         LOAD CSV WITH HEADERS FROM 'file:///info.csv' AS line
         MATCH (i:Industry {industry: line.industry})
         MATCH (a:Company {id: line.id})
@@ -122,7 +142,20 @@ class Graph:
         """
         print(self.query_run(sector_query, {}))
 
+    def add_location_info(self):
+        loc_query = """
+        LOAD CSV WITH HEADERS FROM 'file:///addresses.csv' AS line
+        MATCH (a:Company {id: line.id})
+        SET a.country = line.country
+        SET a.city_state_postal = line.city_state_postal
+        SET a.location_street1 = line.location_street1
+        SET a.point = point({latitude:toFloat(line.lat), longitude:toFloat(line.log)})
+        RETURN a
+        """
+        print(self.query_run(loc_query, {}))
+
     def create_competitors(self):
+        competitors_query = """
         competitors_query = """
         LOAD CSV WITH HEADERS FROM 'file:///competitors.csv' AS line
         MATCH (a:Company {id: line.source_id})
@@ -130,10 +163,12 @@ class Graph:
         MERGE (a)-[:COMPETES {id: line.index, date: line.start_date}]-(b)
         RETURN a,b
         """
+        """
 
         print(self.query_run(competitors_query, {}))
 
     def create_parents(self):
+        competitors_query = """
         competitors_query = """
         LOAD CSV WITH HEADERS FROM 'file:///parents.csv' AS line
         MATCH (a:Company {id: line.source_id})
@@ -144,9 +179,12 @@ class Graph:
         RETURN a,b
         """
 
+        """
+
         print(self.query_run(competitors_query, {}))
 
     def create_partners(self):
+        competitors_query = """
         competitors_query = """
         LOAD CSV WITH HEADERS FROM 'file:///partners.csv' AS line
         MATCH (a:Company {id: line.source_id})
@@ -154,10 +192,12 @@ class Graph:
         MERGE (a)-[:PARTNERS {id: line.index, date: line.start_date}]-(b)
         RETURN a,b
         """
+        """
 
         print(self.query_run(competitors_query, {}))
 
     def create_suppliers(self):
+        competitors_query = """
         competitors_query = """
         LOAD CSV WITH HEADERS FROM 'file:///suppliers.csv' AS line
         MATCH (a:Company {id: line.source_id})
@@ -167,15 +207,19 @@ class Graph:
         MERGE (a)-[:SUPPLIES {id: line.index, date: line.start_date, revenue_pct:line.revenue_pct}]->(b)
         RETURN a,b
         """
+        """
 
         print(self.query_run(competitors_query, {}))
 
     def clear_database(self):
         clear_query = """
+        clear_query = """
         MATCH (n) DETACH DELETE n;
+        """
         """
 
         print(self.query_run(clear_query, {}))
+
 
     def drop_constraints(self):
         company_constraint_query = """
@@ -186,10 +230,16 @@ class Graph:
         DROP CONSTRAINT competitor_id;
         """
         parent_constraint_query = """
+        """
+        parent_constraint_query = """
         DROP CONSTRAINT parent_id;
         """
         partner_constraint_query = """
+        """
+        partner_constraint_query = """
         DROP CONSTRAINT partner_id;
+        """
+        supplier_constraint_query = """
         """
         supplier_constraint_query = """
         DROP CONSTRAINT supplier_id;
