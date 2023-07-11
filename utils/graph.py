@@ -128,15 +128,29 @@ class Graph:
         """
         print(self.query_run(sector_query, {}))
 
+    def create_locations(self):
+        locations_query = """ 
+        LOAD CSV WITH HEADERS FROM 'file:///addresses.csv' AS line
+        MERGE (s:Continent {continent: line.continent})
+        MERGE (i:Country {country: line.country})
+        MERGE (i)-[:IN_CONTINENT]->(s)
+        RETURN s,i
+        """
+        print(self.query_run(locations_query, {}))
+
     def add_location_info(self):
         loc_query = """
         LOAD CSV WITH HEADERS FROM 'file:///addresses.csv' AS line
+
+        MATCH (i:Country {country: line.country})
         MATCH (a:Company {id: line.id})
-        SET a.country = line.country
-        SET a.city_state_postal = line.city_state_postal
-        SET a.location_street1 = line.location_street1
-        SET a.point = point({latitude:toFloat(line.lat), longitude:toFloat(line.log)})
-        RETURN a
+        MERGE (a)-[:IN_INDUSTRY]->(i)
+        ON CREATE 
+            SET 
+                a.city_state_postal = line.city_state_postal,
+                a.location_street1 = line.location_street1,
+                a.point = point({latitude:toFloat(line.lat), longitude:toFloat(line.log)})
+        RETURN a,i
         """
         print(self.query_run(loc_query, {}))
 
