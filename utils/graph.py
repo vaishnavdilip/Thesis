@@ -122,7 +122,7 @@ class Graph:
     def create_locations(self):
         locations_query = """ 
         LOAD CSV WITH HEADERS FROM 'file:///addresses.csv' AS line
-        MERGE (s:Continent {continent: line.continent})
+        MERGE (s:Continent {continent: line.Continent})
         MERGE (i:Country {country: line.country})
         MERGE (i)-[:IN_CONTINENT]->(s)
         """
