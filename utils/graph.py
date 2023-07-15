@@ -8,7 +8,6 @@ import pandas as pd
 
 
 class Graph:
-    
     def __init__(self, uri, username, password):
         self.uri = uri
         self.username = username
@@ -30,7 +29,6 @@ class Graph:
 
         return results
 
-
     def query_run(self, query, parameters):
         """This is the function used to run queries.
 
@@ -43,14 +41,12 @@ class Graph:
         """
         with self.driver.session(database="neo4j") as session:
             results = session.run(query, parameters).data()
-            results = session.run(query, parameters).data()
         self.driver.close()
 
         print(results)
 
     def query_run_df(self, query, parameters):
         with self.driver.session(database="neo4j") as session:
-            result = session.run(query, parameters)
             result = session.run(query, parameters)
             df = pd.DataFrame([r.values() for r in result], columns=result.keys())
         self.driver.close()
@@ -63,7 +59,6 @@ class Graph:
             MERGE (a:Company {id: line.source_id, name: line.source_name})
             MERGE (b:Company {id: line.target_id, name: line.targte_name})
             MERGE (a)-[:COMPETES]-(b)
-            RETURN a,b
             """
         results = self.query_run(company_query, {})
 
@@ -94,12 +89,10 @@ class Graph:
         self.query_run(partner_constraint_query, {})
         self.query_run(supplier_constraint_query, {})
 
-
     def create_company(self):
         company_query = """
         LOAD CSV WITH HEADERS FROM 'file:///companies.csv' AS line
         MERGE (a:Company {id: line.id, name: line.name})
-        RETURN a
         """
         print(self.query_run(company_query, {}))
 
@@ -109,7 +102,6 @@ class Graph:
         MERGE (s:Sector {sector: line.sector})
         MERGE (i:Industry {industry: line.industry})
         MERGE (i)-[:IN_SECTOR]->(s)
-        RETURN s,i
         """
 
         print(self.query_run(nace_query, {}))
@@ -124,19 +116,30 @@ class Graph:
             SET 
                 a.code = line.code,
                 a.nace_description = line.nace_description
-        RETURN a,i
         """
         print(self.query_run(sector_query, {}))
+
+    def create_locations(self):
+        locations_query = """ 
+        LOAD CSV WITH HEADERS FROM 'file:///addresses.csv' AS line
+        MERGE (s:Continent {continent: line.Continent})
+        MERGE (i:Country {country: line.country})
+        MERGE (i)-[:IN_CONTINENT]->(s)
+        """
+        print(self.query_run(locations_query, {}))
 
     def add_location_info(self):
         loc_query = """
         LOAD CSV WITH HEADERS FROM 'file:///addresses.csv' AS line
+
+        MATCH (i:Country {country: line.country})
         MATCH (a:Company {id: line.id})
-        SET a.country = line.country
-        SET a.city_state_postal = line.city_state_postal
-        SET a.location_street1 = line.location_street1
-        SET a.point = point({latitude:toFloat(line.lat), longitude:toFloat(line.log)})
-        RETURN a
+        MERGE (a)-[:IN_COUNTRY]->(i)
+        ON CREATE 
+            SET 
+                a.city_state_postal = line.city_state_postal,
+                a.location_street1 = line.location_street1,
+                a.point = point({latitude:toFloat(line.lat), longitude:toFloat(line.log)})
         """
         print(self.query_run(loc_query, {}))
 
@@ -146,7 +149,6 @@ class Graph:
         MATCH (a:Company {id: line.source_id})
         MATCH (b:Company {id: line.target_id})
         MERGE (a)-[:COMPETES {id: line.index, date: line.start_date}]-(b)
-        RETURN a,b
         """
 
         print(self.query_run(competitors_query, {}))
@@ -159,7 +161,6 @@ class Graph:
         WITH a,line
         MATCH (b:Company {id: line.target_id})
         MERGE (a)-[:ULTIMATE_PARENT_OF {id: line.index, date: line.start_date}]->(b)
-        RETURN a,b
         """
 
         print(self.query_run(competitors_query, {}))
@@ -170,7 +171,6 @@ class Graph:
         MATCH (a:Company {id: line.source_id})
         MATCH (b:Company {id: line.target_id})
         MERGE (a)-[:PARTNERS {id: line.index, date: line.start_date}]-(b)
-        RETURN a,b
         """
 
         print(self.query_run(competitors_query, {}))
@@ -182,8 +182,13 @@ class Graph:
         SET a:Supplier
         WITH a,line
         MATCH (b:Company {id: line.target_id})
-        MERGE (a)-[:SUPPLIES {id: line.index, date: line.start_date, revenue_pct:line.revenue_pct}]->(b)
-        RETURN a,b
+        MERGE (a)-[r:SUPPLIES]->(b)
+        ON CREATE
+            SET
+                r.id = line.index, 
+                r.date = line.start_date, 
+                r.revenue_pct = line.revenue_pct,
+                r.distance = point.distance(a.point, b.point)     
         """
 
         print(self.query_run(competitors_query, {}))
@@ -192,9 +197,8 @@ class Graph:
         clear_query = """
         MATCH (n) DETACH DELETE n;
         """
-        
-        print(self.query_run(clear_query, {}))
 
+        print(self.query_run(clear_query, {}))
 
     def drop_constraints(self):
         company_constraint_query = """
