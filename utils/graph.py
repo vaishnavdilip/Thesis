@@ -92,7 +92,7 @@ class Graph:
     def create_company(self):
         company_query = """
         LOAD CSV WITH HEADERS FROM 'file:///companies.csv' AS line
-        MERGE (a:Company {id: line.id, name: line.name})
+        MERGE (:Company {id: line.id, name: line.name})
         """
         print(self.query_run(company_query, {}))
 
@@ -186,7 +186,7 @@ class Graph:
         ON CREATE
             SET
                 r.id = line.index, 
-                r.date = line.start_date, 
+                r.date = datetime(line.start_date), 
                 r.revenue_pct = line.revenue_pct,
                 r.distance = point.distance(a.point, b.point)     
         """
