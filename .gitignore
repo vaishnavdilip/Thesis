@@ -165,3 +165,7 @@ notebook/graph_creation_alter.ipynb
 /.vscode/
 
 /venv/
+/plots/
+/paradise-papers-django/
+/docs/
+/archive

@@ -6,8 +6,9 @@ from .utils import (
     fetch_nodes,
     fetch_node_details,
     fetch_countries,
-    fetch_jurisdictions,
-    fetch_data_source,
+    fetch_industries,
+    # fetch_data_source,
+    fetch_continents,
 )
 
 
@@ -78,17 +79,27 @@ class GetCountries(APIView):
         return Response(data)
 
 
-class GetJurisdictions(APIView):
+class GetIndustries(APIView):
     def get(self, request):
-        jurisdictions = fetch_jurisdictions()
+        industries = fetch_industries()
         data = {
             'response': {
                 'status': '200',
-                'data': jurisdictions,
+                'data': industries,
             },
         }
         return Response(data)
 
+class GetContinents(APIView):
+    def get(self, request):
+        continents = fetch_continents()
+        data = {
+            'response': {
+                'status': '200',
+                'data': continents,
+            },
+        }
+        return Response(data)
 
 # class GetDataSource(APIView):
 #     def get(self, request):

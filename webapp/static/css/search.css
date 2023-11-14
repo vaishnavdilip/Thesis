@@ -2,6 +2,8 @@
  * Search App Styles
  ***************************************************************************/
 
+
+ 
 #search-home {
   height: 100vh;
 }
@@ -42,3 +44,5 @@
 .clickable-rows tbody tr {
   cursor: pointer;
 }
+
+

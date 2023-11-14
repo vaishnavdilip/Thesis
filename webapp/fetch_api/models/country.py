@@ -12,16 +12,14 @@ from django_neomodel import DjangoNode
 from .nodeutils import NodeUtils
 
 
-class Country(DjangoNode):
+class Country(DjangoNode, NodeUtils):
 
     country = StringProperty()
 
     # Relationships
-    company_in                = RelationshipTo('.company.Company', 'IN_COUNTRY')
-    supplier_in               = RelationshipTo('.supplier.Supplier', 'IN_COUNTRY')
-    parent_in                 = RelationshipTo('.parent.Parent', 'IN_COUNTRY')
+    company                = RelationshipFrom('.company.Company', 'IN_COUNTRY')
 
-    continent_of              = RelationshipFrom('.continent.Continent', 'IN_CONTINENT')
+    continent              = RelationshipTo('.continent.Continent', 'IN_CONTINENT')
 
 
     class Meta:
@@ -39,19 +37,11 @@ class Country(DjangoNode):
     def serialize_relationships(self):
         return [
             {
-                'nodes_type': 'Suppplier',
-                'nodes_related': self.serialize_relationships(self.supplier_in.all()),
-            },
-            {
-                'nodes_type': 'Parent',
-                'nodes_related': self.serialize_relationships(self.parent_in.all()),
-            },
-            {
                 'nodes_type': 'Company',
-                'nodes_related': self.serialize_relationships(self.company_in.all()),
+                'nodes_related': self.serialize_relationships(self.company.all()),
             },
             {
                 'nodes_type': 'Continent',
-                'nodes_related': self.serialize_relationships(self.continent_of.all()),
+                'nodes_related': self.serialize_relationships(self.continent.all()),
             },
         ]

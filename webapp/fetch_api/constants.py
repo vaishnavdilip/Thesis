@@ -10,9 +10,17 @@ countries = db.cypher_query(
 industries = db.cypher_query(
     '''
     MATCH (n:Industry)
-    RETURN DISTINCT n.industry AS industries
+    RETURN DISTINCT n.name AS industries
+    '''
+)[0]
+
+continents = db.cypher_query(
+    '''
+    MATCH (n:Continent)
+    RETURN DISTINCT n.continent AS continents
     '''
 )[0]
 
 COUNTRIES = sorted([country[0] for country in countries])
 INDUSTRIES = sorted([industry[0] for industry in industries])
+CONTINENTS = sorted([continent[0] for continent in continents])

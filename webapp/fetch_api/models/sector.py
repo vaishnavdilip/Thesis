@@ -12,7 +12,7 @@ from django_neomodel import DjangoNode
 from .nodeutils import NodeUtils
 
 
-class Sector(DjangoNode):
+class Sector(DjangoNode, NodeUtils):
 
     name = StringProperty()
 

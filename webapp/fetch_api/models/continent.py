@@ -12,9 +12,9 @@ from django_neomodel import DjangoNode
 from .nodeutils import NodeUtils
 
 
-class Continent(DjangoNode):
+class Continent(DjangoNode, NodeUtils):
 
-    name = StringProperty()
+    continent = StringProperty()
 
     # Country Node
 
@@ -29,7 +29,7 @@ class Continent(DjangoNode):
     def serialize(self):
         return {
             'node_properties': {
-                'name': self.name,         
+                'continent': self.continent,         
             },
         }
     

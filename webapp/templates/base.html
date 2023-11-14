@@ -1,4 +1,4 @@
-{% load staticfiles %}
+{% load static %}
 <!doctype html>
 <html lang="en">
 
@@ -17,10 +17,19 @@
   <!-- Custom styles for this template -->
   <link href="{% static 'css/search.css' %}" rel="stylesheet">
 
+  <!-- Custom styles for this template -->
+  <link href="{% static 'css/navbar.css' %}" rel="stylesheet">
+
   <title>{% block head_title %}SemiConductor Supply Chain{% endblock head_title %}</title>
 </head>
 
 <body>
+
+  <div class="topnav">
+    <a class="active" href="/">Home</a>
+    <a href="/dashboard/">Dashboard</a>
+  </div>
+
   {% block content %}
   {% endblock content %}
 

@@ -28,10 +28,23 @@
 
   const nodes_settings = {
     Company: {
-      name: ["", true],
-      code: ["Code", true],
-      nace_description: ["nace_description", true],
-      countries: ["Linked To", true],
+      name: ["Name", true],
+      code: ["NACBEL Code", true],
+      city_state_postal: ["Address Line 2", true],
+      country: ["Country", false],
+      jurisdiction: ["Industry", false],
+    },
+    Continent: {
+      continent: ["Continent", true],
+    },
+    Country: {
+      country: ["Country", true],
+    },
+    Industry: {
+      name: ["Industry", true],
+    },
+    Sector: {
+      name: ["Sector", true],
     },
   };
 
@@ -51,7 +64,7 @@
       if (typeof node_id_or_properties === "number") {
         this._node_id = node_id_or_properties;
       } else {
-        this._node_id = node_id_or_properties.node_id;
+        this._node_id = node_id_or_properties.id;
         this._node_properties = node_id_or_properties;
       }
     }
@@ -238,6 +251,7 @@
       this._searchText = ko.observable("");
       this._countryList = ko.observableArray();
       this._jurisdictionList = ko.observableArray();
+      this._continentList = ko.observableArray();
       this._dataSourceList = ko.observableArray();
       this._filters = {};
 
@@ -261,8 +275,10 @@
 
       this._currentNodeSearch = this._nodeSearchList()[0];
       this.fetchCountries();
-      this.fetchJurisdictions();
-      this.fetchDataSource();
+      this.fetchIndustries();
+      this.fetchContinents();
+      // this.fetchDataSource();
+
     }
 
     /**
@@ -275,7 +291,7 @@
           q: this._searchText(),
           c: this._filters["country"],
           j: this._filters["jurisdiction"],
-          s: this._filters["dataSource"],
+          // s: this._filters["dataSource"],
         });
 
         nodeSearch.fetchCount();
@@ -283,6 +299,7 @@
 
       this._initialSearchDone(true);
       this.displayNodeSearch();
+      console.log(this);
     }
 
     /**
@@ -332,11 +349,11 @@
         });
     }
 
-    fetchJurisdictions() {
-      $.getJSON("fetch/jurisdictions")
-        .done((jurisdictions) => {
-          jurisdictions.response.data.forEach((jurisdiction) => {
-            this._jurisdictionList.push(jurisdiction);
+    fetchIndustries() {
+      $.getJSON("fetch/industries")
+        .done((industries) => {
+          industries.response.data.forEach((industries) => {
+            this._jurisdictionList.push(industries);
           });
         })
         .fail(() => {
@@ -345,11 +362,11 @@
         });
     }
 
-    fetchDataSource() {
-      $.getJSON("fetch/datasource")
-        .done((dataSources) => {
-          dataSources.response.data.forEach((dataSource) => {
-            this._dataSourceList.push(dataSource);
+    fetchContinents() {
+      $.getJSON("fetch/continents")
+        .done((continents) => {
+          continents.response.data.forEach((continent) => {
+            this._continentList.push(continent);
           });
         })
         .fail(() => {
@@ -357,6 +374,19 @@
           console.log("Fetch error");
         });
     }
+
+    // fetchDataSource() {
+    //   $.getJSON("fetch/datasource")
+    //     .done((dataSources) => {
+    //       dataSources.response.data.forEach((dataSource) => {
+    //         this._dataSourceList.push(dataSource);
+    //       });
+    //     })
+    //     .fail(() => {
+    //       /** @todo Handle errors */
+    //       console.log("Fetch error");
+    //     });
+    // }
   }
 
   // Create and bind our SearchApp

@@ -5,9 +5,7 @@ from .models import Company
 from .models import Continent
 from .models import Country
 from .models import Industry
-from .models import Parent
 from .models import Sector
-from .models import Supplier
 
 #  from .address import Address
 #  from .intermediary import Intermediary

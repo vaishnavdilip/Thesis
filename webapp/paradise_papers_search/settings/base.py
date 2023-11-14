@@ -17,19 +17,18 @@ from .env import env
 #Connect to Neo4j Database
 config.DATABASE_URL = 'bolt://neo4j:neo4jneo4j@localhost:7687'  # default
 
-# DATABASES = {
-#     'default': {
-#         'NAME': 'papers.db',
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'USER': '',
-#         'PASSWORD': '',
-#         'PORT': '',
-#     },
-# }
+
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
@@ -48,6 +47,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'fetch_api',
+    'dashboard',
+    'django_plotly_dash.apps.DjangoPlotlyDashConfig',
 ]
 
 MIDDLEWARE = [
@@ -58,6 +59,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+	'django_plotly_dash.middleware.BaseMiddleware',
+    'django_plotly_dash.middleware.ExternalRedirectionMiddleware',
 ]
 
 ROOT_URLCONF = 'paradise_papers_search.urls'
@@ -130,3 +134,6 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     )
 }
+
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'

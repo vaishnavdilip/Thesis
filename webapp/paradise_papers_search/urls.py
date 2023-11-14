@@ -13,12 +13,21 @@ Including another URLconf
     1. Import the include() function: from django.conf.urls import url, include
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
-from django.conf.urls import url, include
+from django.urls import include, re_path
 from django.views.generic import TemplateView
 from django.contrib import admin
+from django.urls import path
+
+from django.conf import settings
+
+# Loading plotly Dash apps script
+import paradise_papers_search.settings.dash_app
 
 urlpatterns = [
-    url(r'^$', TemplateView.as_view(template_name='index.html'), name='index'),
-    url(r'^fetch/', include('fetch_api.urls')),
-    url(r"^admin/", admin.site.urls)
+    re_path('', include('django.contrib.auth.urls')),
+    re_path(r'^$', TemplateView.as_view(template_name='index.html'), name='index'),
+    re_path(r'^fetch/', include('fetch_api.urls')),
+    re_path(r"^admin/", admin.site.urls),
+    re_path('dashboard/', include('dashboard.urls')),
+    path('django_plotly_dash/', include('django_plotly_dash.urls')),
 ]
