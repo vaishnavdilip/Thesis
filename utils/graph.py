@@ -62,10 +62,12 @@ class Graph:
         return df
 
     async def query_run_async(self, query, parameters):
-        async with AsyncGraphDatabase.driver(self.uri, auth=(self.username, self.password)) as driver:
+        async with AsyncGraphDatabase.driver(
+            self.uri, auth=(self.username, self.password)
+        ) as driver:
             async with driver.session(database="neo4j") as session:
                 records = await session.run(query, parameters)
-                df = pd.DataFrame(await records.values(), columns = records.keys())
+                df = pd.DataFrame(await records.values(), columns=records.keys())
                 return df
 
     def create_competitors(self):
@@ -114,9 +116,10 @@ class Graph:
     def create_sector(self):
         nace_query = """
         LOAD CSV WITH HEADERS FROM 'file:///info.csv' AS line
+        MERGE (n:Nace {code: line.code, description: line.nace_description})
         MERGE (s:Sector {name: line.sector})
         MERGE (i:Industry {name: line.industry})
-        MERGE (i)-[:IN_SECTOR]->(s)
+        MERGE (n)-[:IN_INDUSTRY]->(i)-[:IN_SECTOR]->(s)
         """
 
         print(self.query_run(nace_query, {}))
@@ -124,14 +127,13 @@ class Graph:
     def add_sector_info(self):
         sector_query = """
         LOAD CSV WITH HEADERS FROM 'file:///info.csv' AS line
-        MATCH (i:Industry {name: line.industry})
+        MATCH (i:Nace {code: line.code})
         MATCH (a:Company {id: line.id})
-        MERGE (a)-[:IN_INDUSTRY]->(i)
+        MERGE (a)-[:IN_CATEGORY]->(i)
         ON CREATE 
             SET 
-                a.code = line.code,
-                a.nace_description = line.nace_description,
-                a.industries = line.industry
+                a.industries = line.industry,
+                a.sector = line.sector
         """
         print(self.query_run(sector_query, {}))
 
@@ -156,7 +158,8 @@ class Graph:
                 a.city_state_postal = line.city_state_postal,
                 a.location_street1 = line.location_street1,
                 a.point = point({latitude:toFloat(line.lat), longitude:toFloat(line.log)}),
-                a.countries = line.country
+                a.countries = line.country,
+                a.country_code = line.countrycode
         """
         print(self.query_run(loc_query, {}))
 
@@ -165,7 +168,7 @@ class Graph:
         LOAD CSV WITH HEADERS FROM 'file:///competitors.csv' AS line
         MATCH (a:Company {id: line.source_id})
         MATCH (b:Company {id: line.target_id})
-        MERGE (a)-[:COMPETES {id: line.index, date: line.start_date}]-(b)
+        MERGE (a)<-[:COMPETES {id: line.index, date: line.start_date}]->(b)
         """
 
         print(self.query_run(competitors_query, {}))
@@ -185,7 +188,7 @@ class Graph:
         LOAD CSV WITH HEADERS FROM 'file:///partners.csv' AS line
         MATCH (a:Company {id: line.source_id})
         MATCH (b:Company {id: line.target_id})
-        MERGE (a)-[:PARTNERS {id: line.index, date: line.start_date}]-(b)
+        MERGE (a)<-[:PARTNERS {id: line.index, date: line.start_date}]->(b)
         """
 
         print(self.query_run(competitors_query, {}))
@@ -244,6 +247,13 @@ class Graph:
         self.query_run(partner_constraint_query, {})
         self.query_run(supplier_constraint_query, {})
         self.query_run(new_constraint_query, {})
+
+    def add_index(self):
+        index_query = """
+        CREATE FULLTEXT INDEX companyName FOR (n:Company) ON EACH [n.name];
+        """
+
+        self.query_run(index_query, {})
 
 
 # import pandas as pd
