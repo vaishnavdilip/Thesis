@@ -161,3 +161,11 @@ cython_debug/
 
 data/
 notebook/graph_creation_alter.ipynb
+/.idea/
+/.vscode/
+
+/venv/
+/plots/
+/paradise-papers-django/
+/docs/
+/archive

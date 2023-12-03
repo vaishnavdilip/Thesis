@@ -2,9 +2,10 @@
 This file contains functions that can be used throughout the project.
 """
 
-from neo4j import GraphDatabase, basic_auth
+from neo4j import GraphDatabase, basic_auth, AsyncGraphDatabase
 from neo4j.spatial import WGS84Point
 import pandas as pd
+import asyncio
 
 
 class Graph:
@@ -13,9 +14,16 @@ class Graph:
         self.username = username
         self.password = password
         self.driver = self.create_driver()
+        self.async_driver = self.create_async_driver()
 
     def create_driver(self):
         driver = GraphDatabase.driver(
+            self.uri, auth=basic_auth(self.username, self.password)
+        )
+        return driver
+
+    async def create_async_driver(self):
+        driver = AsyncGraphDatabase.driver(
             self.uri, auth=basic_auth(self.username, self.password)
         )
         return driver
@@ -53,6 +61,15 @@ class Graph:
 
         return df
 
+    async def query_run_async(self, query, parameters):
+        async with AsyncGraphDatabase.driver(
+            self.uri, auth=(self.username, self.password)
+        ) as driver:
+            async with driver.session(database="neo4j") as session:
+                records = await session.run(query, parameters)
+                df = pd.DataFrame(await records.values(), columns=records.keys())
+                return df
+
     def create_competitors(self):
         company_query = """
             LOAD CSV WITH HEADERS FROM "file://" AS line
@@ -80,7 +97,7 @@ class Graph:
         """
 
         supplier_constraint_query = """
-        CREATE CONSTRAINT supplier_id FOR ()-[comp:SUPPLIES]->() REQUIRE comp.id IS NOT NULL;
+        CREATE CONSTRAINT supplier_id FOR ()-[comp:SUPPLIES_TO]->() REQUIRE comp.id IS NOT NULL;
         """
 
         self.query_run(company_constraint_query, {})
@@ -99,9 +116,10 @@ class Graph:
     def create_sector(self):
         nace_query = """
         LOAD CSV WITH HEADERS FROM 'file:///info.csv' AS line
-        MERGE (s:Sector {sector: line.sector})
-        MERGE (i:Industry {industry: line.industry})
-        MERGE (i)-[:IN_SECTOR]->(s)
+        MERGE (n:Nace {code: line.code, description: line.nace_description})
+        MERGE (s:Sector {name: line.sector})
+        MERGE (i:Industry {name: line.industry})
+        MERGE (n)-[:IN_INDUSTRY]->(i)-[:IN_SECTOR]->(s)
         """
 
         print(self.query_run(nace_query, {}))
@@ -109,13 +127,13 @@ class Graph:
     def add_sector_info(self):
         sector_query = """
         LOAD CSV WITH HEADERS FROM 'file:///info.csv' AS line
-        MATCH (i:Industry {industry: line.industry})
+        MATCH (i:Nace {code: line.code})
         MATCH (a:Company {id: line.id})
-        MERGE (a)-[:IN_INDUSTRY]->(i)
+        MERGE (a)-[:IN_CATEGORY]->(i)
         ON CREATE 
             SET 
-                a.code = line.code,
-                a.nace_description = line.nace_description
+                a.industries = line.industry,
+                a.sector = line.sector
         """
         print(self.query_run(sector_query, {}))
 
@@ -139,7 +157,9 @@ class Graph:
             SET 
                 a.city_state_postal = line.city_state_postal,
                 a.location_street1 = line.location_street1,
-                a.point = point({latitude:toFloat(line.lat), longitude:toFloat(line.log)})
+                a.point = point({latitude:toFloat(line.lat), longitude:toFloat(line.log)}),
+                a.countries = line.country,
+                a.country_code = line.countrycode
         """
         print(self.query_run(loc_query, {}))
 
@@ -148,7 +168,7 @@ class Graph:
         LOAD CSV WITH HEADERS FROM 'file:///competitors.csv' AS line
         MATCH (a:Company {id: line.source_id})
         MATCH (b:Company {id: line.target_id})
-        MERGE (a)-[:COMPETES {id: line.index, date: line.start_date}]-(b)
+        MERGE (a)<-[:COMPETES {id: line.index, date: line.start_date}]->(b)
         """
 
         print(self.query_run(competitors_query, {}))
@@ -157,8 +177,6 @@ class Graph:
         competitors_query = """
         LOAD CSV WITH HEADERS FROM 'file:///parents.csv' AS line
         MATCH (a:Company {id: line.source_id})
-        SET a:Ultimate_Parent
-        WITH a,line
         MATCH (b:Company {id: line.target_id})
         MERGE (a)-[:ULTIMATE_PARENT_OF {id: line.index, date: line.start_date}]->(b)
         """
@@ -170,7 +188,7 @@ class Graph:
         LOAD CSV WITH HEADERS FROM 'file:///partners.csv' AS line
         MATCH (a:Company {id: line.source_id})
         MATCH (b:Company {id: line.target_id})
-        MERGE (a)-[:PARTNERS {id: line.index, date: line.start_date}]-(b)
+        MERGE (a)<-[:PARTNERS {id: line.index, date: line.start_date}]->(b)
         """
 
         print(self.query_run(competitors_query, {}))
@@ -179,14 +197,12 @@ class Graph:
         competitors_query = """
         LOAD CSV WITH HEADERS FROM 'file:///suppliers.csv' AS line
         MATCH (a:Company {id: line.source_id})
-        SET a:Supplier
-        WITH a,line
         MATCH (b:Company {id: line.target_id})
-        MERGE (a)-[r:SUPPLIES]->(b)
+        MERGE (a)-[r:SUPPLIES_TO]->(b)
         ON CREATE
             SET
                 r.id = line.index, 
-                r.date = datetime(line.start_date), 
+                r.date = line.start_date, 
                 r.revenue_pct = line.revenue_pct,
                 r.distance = point.distance(a.point, b.point)     
         """
@@ -202,23 +218,27 @@ class Graph:
 
     def drop_constraints(self):
         company_constraint_query = """
-        DROP CONSTRAINT company_id;
+        DROP CONSTRAINT company_id IF EXISTS;
         """
 
         competitor_constraint_query = """
-        DROP CONSTRAINT competitor_id;
+        DROP CONSTRAINT competitor_id IF EXISTS;
         """
 
         parent_constraint_query = """
-        DROP CONSTRAINT parent_id;
+        DROP CONSTRAINT parent_id IF EXISTS;
         """
 
         partner_constraint_query = """
-        DROP CONSTRAINT partner_id;
+        DROP CONSTRAINT partner_id IF EXISTS;
         """
 
         supplier_constraint_query = """
-        DROP CONSTRAINT supplier_id;
+        DROP CONSTRAINT supplier_id IF EXISTS;
+        """
+
+        new_constraint_query = """
+        DROP CONSTRAINT constraint_unique_Company_pk IF EXISTS;
         """
 
         self.query_run(company_constraint_query, {})
@@ -226,6 +246,14 @@ class Graph:
         self.query_run(parent_constraint_query, {})
         self.query_run(partner_constraint_query, {})
         self.query_run(supplier_constraint_query, {})
+        self.query_run(new_constraint_query, {})
+
+    def add_index(self):
+        index_query = """
+        CREATE FULLTEXT INDEX companyName FOR (n:Company) ON EACH [n.name];
+        """
+
+        self.query_run(index_query, {})
 
 
 # import pandas as pd
