@@ -12,6 +12,7 @@ Create a virtual environment for this project. I created one using the virtualen
 ```{python}
 virtualenv venv
 ```
+
 Once the virtualenv is created, activate it using
 
 ```{python}
@@ -24,10 +25,10 @@ on Windows. Activate using source command if on Linux.
 
 Now we can install the packages required for this project using the requirements.txt
 
-
 ```{python}
 pip install -r requirements.txt
 ```
+
 This might take some time. Once the installation is done, you can start exploring the notebooks in the notebook folder.
 
 ## Things to do
